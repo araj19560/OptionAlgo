@@ -1,11 +1,10 @@
 import streamlit as st
-import matplotlib.pyplot as plt
 
 # --- Page setup ---
-st.set_page_config(page_title="ALGO Manipulation in Non-Liquid Option", layout="wide")
+st.set_page_config(page_title="ALGO Manipulation in Non-Liquid Option", layout="centered")
 st.title("🎯 ALGO Manipulation in a Non-Liquid Option Market")
 
-# --- User Inputs ---
+# --- Sidebar Inputs ---
 st.sidebar.header("Simulation Settings")
 
 fair_value = st.sidebar.number_input("Fair Value of Option", min_value=10, value=40, step=1)
@@ -15,62 +14,51 @@ human_entry = st.sidebar.number_input("Human Entry Price", min_value=1, value=21
 manipulation_margin = st.sidebar.slider("ALGO Sell Threshold (% above Fair Value)", 10, 50, 20)
 
 st.sidebar.markdown("---")
-st.sidebar.info("💡 ALGO manipulates price up to the chosen percentage above fair value, then sells to HUMAN.")
+st.sidebar.info("💡 ALGO manipulates prices above fair value before selling to HUMAN.")
 
 # --- Simulation Logic ---
-price_history = []
-participants = []
+simulation_steps = []
 
 # Step 1: Initial ALGO control
-price_history.append((algo_bid + algo_ask) / 2)
-participants.append("ALGO (controls both sides)")
+simulation_steps.append(f"ALGO places fake liquidity: Bid @ {algo_bid}, Ask @ {algo_ask}")
 
 # Step 2: Human enters at entry price
-price_history.append(human_entry)
-participants.append("HUMAN buys at " + str(human_entry))
+simulation_steps.append(f"HUMAN enters the market and buys at ₹{human_entry}")
 
-# Step 3: ALGO pushes bid up gradually
+# Step 3: ALGO starts pushing the bid upward to attract human
 current_price = human_entry
 while current_price < fair_value * (1 + manipulation_margin / 100):
     current_price += 1
-    price_history.append(current_price)
-    participants.append("ALGO pushing bid up")
+    simulation_steps.append(f"ALGO increases bid to ₹{current_price}")
 
 # Step 4: ALGO sells to human at inflated price
 sell_price = fair_value * (1 + manipulation_margin / 100)
-price_history.append(sell_price)
-participants.append(f"ALGO sells at inflated price ({sell_price:.2f})")
+simulation_steps.append(f"ALGO sells the option to HUMAN at ₹{sell_price:.2f} (20% above fair value)")
 
 # Step 5: ALGO resets fake bid/ask
-price_history.append((algo_bid + algo_ask) / 2)
-participants.append("ALGO resets to 20/80")
+simulation_steps.append(f"After selling, ALGO resets back to Bid @ {algo_bid}, Ask @ {algo_ask}")
 
-# --- Plotting ---
-fig, ax = plt.subplots(figsize=(10, 5))
-ax.plot(price_history, marker='o', color='blue', linewidth=2)
+# --- Display the steps ---
+st.subheader("🧩 Simulation Steps:")
+for step in simulation_steps:
+    st.write(f"• {step}")
 
-for i, label in enumerate(participants):
-    ax.text(i, price_history[i] + 0.8, label, fontsize=8, rotation=30)
-
-ax.axhline(y=fair_value, color='green', linestyle='--', label=f'Fair Value ({fair_value})')
-ax.set_title("ALGO Manipulation Simulation in a Non-Liquid Option Market", fontsize=12)
-ax.set_xlabel("Simulation Step")
-ax.set_ylabel("Option Price")
-ax.grid(True)
-ax.legend()
-
-st.pyplot(fig)
-
-# --- Output Summary ---
+# --- Outcome ---
 human_loss = sell_price - fair_value
-st.markdown("### 📊 Simulation Summary")
-st.write(f"""
-- **Fair Value:** {fair_value}  
-- **ALGO starts as buyer @ {algo_bid} and seller @ {algo_ask}**  
-- **Human enters @ {human_entry}**  
-- **ALGO sells at inflated price:** {sell_price:.2f}  
-- **Actual Fair Value:** {fair_value}  
-- **Human's Immediate Unrealized Loss:** {human_loss:.2f}
-""")
+st.markdown("---")
+st.subheader("📊 Simulation Summary")
+st.write(f"**Fair Value:** ₹{fair_value}")
+st.write(f"**ALGO Sell Price:** ₹{sell_price:.2f}")
+st.write(f"**HUMAN's Unrealized Loss:** ₹{human_loss:.2f}")
+st.markdown(
+    f"""
+**Explanation:**  
+- ALGO manipulates both buy and sell sides in an illiquid option.  
+- HUMAN buys above fair value thinking demand is real.  
+- Once price hits {manipulation_margin}% above fair value (₹{sell_price:.2f}),  
+  ALGO sells and resets the order book.  
+- HUMAN is left holding at a loss since the fair price remains ₹{fair_value}.
+"""
+)
 
-st.warning("⚠️ In illiquid markets, ALGO can manipulate both bid and ask prices — retail traders often end up buying above fair value and incur losses once the ALGO resets its positions.")
+st.warning("⚠️ In illiquid options, ALGO can control both sides of the order book, creating fake market depth and trapping manual traders.")
